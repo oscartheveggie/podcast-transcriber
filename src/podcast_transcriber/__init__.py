@@ -1,6 +1,6 @@
 """podcast_transcriber package."""
 
-from .spotify import SpotifyPodcastTranscriber
+from .downloader import Downloader
 from .transcript import TranscriptExporter
 
-__all__ = ["SpotifyPodcastTranscriber", "TranscriptExporter"]
+__all__ = ["Downloader", "TranscriptExporter"]
