@@ -1,6 +1,7 @@
-"""Transcript export helpers."""
+"""Transcript helpers."""
 
 from pathlib import Path
+import whisperx
 
 
 class TranscriptExporter:

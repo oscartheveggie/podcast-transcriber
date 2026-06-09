@@ -1,6 +1,5 @@
 """Spotify podcast transcription interfaces."""
-import spotdl
-import subprocess
+
 
 class Downloader:
     """
