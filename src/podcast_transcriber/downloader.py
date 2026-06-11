@@ -1,7 +1,8 @@
 """Spotify podcast transcription interfaces."""
+import pyaudio
 
+class Downloader:conda install "ffmpeg" -c conda-forge
 
-class Downloader:
     """
     Downloader class for podcast episodes.
     
@@ -17,6 +18,13 @@ class Downloader:
         """Initialize the Downloader."""
         self.platform = platform
         self.supported_platforms = ["spotify"]
+
+
+    def _record_in_vb(self, episode_url: str) -> bytes:
+        """Record the audio from the given episode URL using a virtual audio cable and return the MP3 data."""
+
+        # placeholder for actual recording logic using selenium and pyaudio
+        return b""
 
 
     def _spotify_to_mp3(self, episode_url: str) -> bytes:

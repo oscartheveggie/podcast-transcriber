@@ -1,1 +1,11 @@
+ctranslate2
 whisperx
+pyaudio
+torch
+ffmpeg   # You should install FFmpeg separately on your system and ensure it's in your PATH
+tqdm
+python-dotenv
+# if you have installed torchcodec and you see the warning that 
+# Could not find module '...\anaconda3\envs\podcast-transcriber\
+# Lib\site-packages\torchcodec\libtorchcodec_core6.dll', uninstall
+# torchcodec using 'pip uninstall torchcodec' and ignore the warning
