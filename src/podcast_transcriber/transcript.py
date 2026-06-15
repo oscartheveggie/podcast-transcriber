@@ -14,9 +14,11 @@ HF_TOKEN = os.getenv("HF_TOKEN") # get from https://huggingface.co/settings/toke
 
 SCRIPT_DIR = Path(__file__).parent
 
+AVAILABLE_MODELS = ["whisperx_small", "whisperx_medium"] # for now, only whisperx is supported
+
 class Transcriber:
 
-    def __init__(self, model_name: str = "small", 
+    def __init__(self, model_name: str = "whisperx_small", 
                  model_dir: str = None, 
                  device: str = "cpu", 
                  compute_type: str = "int8",
@@ -24,6 +26,9 @@ class Transcriber:
                  diarize: bool = False):
         
         self.model_name: str = model_name
+        if self.model_name not in AVAILABLE_MODELS:
+            raise ValueError(f"Model '{self.model_name}' not supported. Available models: {AVAILABLE_MODELS}")
+        
         self.model_dir: str = model_dir
         self.device: str = device
         self.compute_type: str = compute_type
@@ -31,21 +36,17 @@ class Transcriber:
         self.diarize: bool = diarize
         self.transcript: dict | None = None
 
+        self.model = None
+    
+
+    def _transcribe_whisperx(self, model_size: str, audio_path: str | Path, min_speakers: int = None, max_speakers: int = None) -> dict:
+        """Transcribe the given audio file and return the transcript text."""
+        
         self.model: whisperx.WhisperX = whisperx.load_model(
-            self.model_name, 
+            model_size, 
             self.device, 
             compute_type=self.compute_type, 
             download_root=self.model_dir)
-    
-
-    
-    def transcribe(self, audio_path: str | Path, min_speakers: int = None, max_speakers: int = None) -> dict:
-        """Transcribe the given audio file and return the transcript text."""
-        
-        # 0. Check whether audio path exists
-        audio_path = Path(audio_path)
-        if not audio_path.is_file():
-            raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
         # 1. Transcribe with whisperx
         print("\n" + "="*50 + "\nTranscribing audio with WhisperX...")
@@ -78,6 +79,22 @@ class Transcriber:
         return self.transcript
     
 
+    def transcribe(self, audio_path: str | Path, min_speakers: int = None, max_speakers: int = None) -> dict:
+
+        # 0. Check whether audio path exists
+        audio_path = Path(audio_path)
+        if not audio_path.is_file():
+            raise FileNotFoundError(f"Audio file not found: {audio_path}")
+        
+        # 1. WhisperX model
+        if self.model_name.startswith("whisperx"):
+            model_size = self.model_name.split("_")[1] # e.g. "small" or "medium"
+            return self._transcribe_whisperx(model_size=model_size, 
+                                             audio_path=audio_path, 
+                                             min_speakers=min_speakers, 
+                                             max_speakers=max_speakers)
+        
+
     def export_to_txt(self, output_path: str | Path) -> str:
         """Export the transcript text to a .txt file and return the file path."""
         
@@ -101,8 +118,8 @@ class Transcriber:
 
 if __name__ == "__main__":
     
-    transcriber = Transcriber()
-    transcriber.transcribe(SCRIPT_DIR / "../../input/transcoded.mp3", min_speakers=1, max_speakers=2)
+    transcriber = Transcriber(model_dir=SCRIPT_DIR/"../../model")
+    transcriber.transcribe(audio_path=SCRIPT_DIR / "../../input/transcoded.mp3", min_speakers=1, max_speakers=2)
     sample_transcript = "This is a sample transcript for testing."
     output_file = SCRIPT_DIR / "../../output/sample_transcript.txt"
     saved_path = transcriber.export_to_txt(output_file)

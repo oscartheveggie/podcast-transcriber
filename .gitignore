@@ -1,6 +1,10 @@
 # Textfile outputs
-output/
-input/
+output/*
+input/*
+model/*
+!output/.gitignore
+!input/.gitignore
+!model/.gitignore
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
