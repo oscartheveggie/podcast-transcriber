@@ -12,20 +12,23 @@ import dotenv
 dotenv.load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN") # get from https://huggingface.co/settings/tokens
 
+SCRIPT_DIR = Path(__file__).parent
 
 class Transcriber:
 
     def __init__(self, model_name: str = "small", 
-                 model_dir: str = "/path/to/model", 
+                 model_dir: str = None, 
                  device: str = "cpu", 
-                 compute_type: str = "float16",
-                 batch_size: int = 16):
+                 compute_type: str = "int8",
+                 batch_size: int = 16,
+                 diarize: bool = False):
         
         self.model_name: str = model_name
         self.model_dir: str = model_dir
         self.device: str = device
         self.compute_type: str = compute_type
         self.batch_size: int = batch_size
+        self.diarize: bool = diarize
         self.transcript: dict | None = None
 
         self.model: whisperx.WhisperX = whisperx.load_model(
@@ -39,28 +42,36 @@ class Transcriber:
     def transcribe(self, audio_path: str | Path, min_speakers: int = None, max_speakers: int = None) -> dict:
         """Transcribe the given audio file and return the transcript text."""
         
+        # 0. Check whether audio path exists
+        audio_path = Path(audio_path)
+        if not audio_path.is_file():
+            raise FileNotFoundError(f"Audio file not found: {audio_path}")
+
         # 1. Transcribe with whisperx
-        print("\nTranscribing audio with WhisperX...")
+        print("\n" + "="*50 + "\nTranscribing audio with WhisperX...")
         audio = whisperx.load_audio(str(audio_path))
         result = self.model.transcribe(audio, batch_size=self.batch_size)
         print(result["segments"]) # before alignment
 
         # 2. Align whisper output
-        print("\nAligning whisper output...")
+        print("\n" + "="*50 + "\nAligning whisper output...")
         model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=self.device)
         result = whisperx.align(result["segments"], model_a, metadata, audio, self.device, return_char_alignments=False)
         print(result["segments"]) # after alignment
 
         # 3. Assign speaker labels
-        print("\nAssigning speaker labels...")
-        diarize_model = DiarizationPipeline(token=HF_TOKEN, device=self.device)
+        if (self.diarize):
+            print("\n" + "="*50 + "\nAssigning speaker labels...")
+            diarize_model = DiarizationPipeline(token=HF_TOKEN, device=self.device)
 
-        # add min/max number of speakers if known
-        diarize_segments = diarize_model(audio, min_speakers=min_speakers, max_speakers=max_speakers)
+            # add min/max number of speakers if known
+            diarize_segments = diarize_model(audio, min_speakers=min_speakers, max_speakers=max_speakers)
 
-        result = whisperx.assign_word_speakers(diarize_segments, result)
-        print(diarize_segments)
-        print(result["segments"]) # segments are now assigned speaker IDs
+            result = whisperx.assign_word_speakers(diarize_segments, result)
+            print("\n" + "="*50 + "\nDiarized segments:")
+            print(diarize_segments)
+            print("\n" + "="*50 + "\nSegments with speaker IDs:")
+            print(result["segments"]) # segments are now assigned speaker IDs
 
         self.transcript = result
 
@@ -90,11 +101,9 @@ class Transcriber:
 
 if __name__ == "__main__":
     
-    print(HF_TOKEN)
-
-    """
     transcriber = Transcriber()
+    transcriber.transcribe(SCRIPT_DIR / "../../input/transcoded.mp3", min_speakers=1, max_speakers=2)
     sample_transcript = "This is a sample transcript for testing."
-    output_file = "output/sample_transcript.txt"
-    saved_path = transcriber.export_to_txt(sample_transcript, output_file)
-    """
+    output_file = SCRIPT_DIR / "../../output/sample_transcript.txt"
+    saved_path = transcriber.export_to_txt(output_file)
+    

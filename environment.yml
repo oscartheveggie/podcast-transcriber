@@ -1,0 +1,16 @@
+name: podcast-transcriber
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.9
+  - ctranslate2
+  - ffmpeg
+  - pyaudio
+  - pytorch
+  - tqdm
+  - python-dotenv
+  - pip
+  - pip:
+      # whisperx is not consistently available as a conda-forge package.
+      # Keep pip packages isolated here so conda can solve the binary stack first.
+      - whisperx
