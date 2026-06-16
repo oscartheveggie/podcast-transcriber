@@ -1,7 +1,7 @@
 """Spotify podcast transcription interfaces."""
 import pyaudio
 
-class Downloader:conda install "ffmpeg" -c conda-forge
+class Downloader:
 
     """
     Downloader class for podcast episodes.

@@ -5,6 +5,7 @@ dependencies:
   - python>=3.9
   - ctranslate2
   - ffmpeg
+  - openai-whisper
   - pyaudio
   - pytorch
   - tqdm
