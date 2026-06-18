@@ -6,6 +6,7 @@ dependencies:
   - ctranslate2
   - ffmpeg
   - huggingface_hub
+  - jiwer
   - modelscope
   - mutagen
   - openai-whisper
