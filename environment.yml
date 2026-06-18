@@ -5,13 +5,18 @@ dependencies:
   - python>=3.9
   - ctranslate2
   - ffmpeg
+  - huggingface_hub
+  - modelscope
+  - mutagen
   - openai-whisper
   - pyaudio
-  - pytorch
+  - torchaudio
   - tqdm
   - python-dotenv
   - pip
   - pip:
-      # whisperx is not consistently available as a conda-forge package.
+      # whisperx and funasr are not consistently available as conda-forge packages.
       # Keep pip packages isolated here so conda can solve the binary stack first.
       - whisperx
+      - funasr>=1.1.3
+      - qwen-asr
