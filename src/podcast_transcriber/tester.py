@@ -12,6 +12,7 @@ from transcript import Transcriber
 from tqdm import tqdm
 from mutagen.mp3 import MP3
 from datetime import datetime
+from plyer import notification
 
 
 class Tester:
@@ -25,7 +26,8 @@ class Tester:
                  compute_type: str = "int8",
                  batch_size: int = 16,
                  diarize: bool = False,
-                 save_output: bool = True
+                 save_output: bool = True,
+                 chi_sim: bool = False          # True for simplified Chinese, False for traditional Chinese.
                  ):
 
         if models is None or len(models) == 0:
@@ -42,6 +44,7 @@ class Tester:
         self.compute_type = compute_type
         self.batch_size = batch_size
         self.diarize = diarize
+        self.chi_sim = chi_sim
         self.results: dict[str, dict] = {} # model_name -> {transcript: str, processing_time: float}
 
     def _save_output(self):
@@ -83,7 +86,8 @@ class Tester:
                                       device=self.device,
                                       compute_type=self.compute_type,
                                       batch_size=self.batch_size,
-                                      diarize=self.diarize
+                                      diarize=self.diarize,
+                                      chi_sim=self.chi_sim
                                       )
             start_time = time.time()
             transcript = transcriber.transcribe(self.audio_path)
@@ -91,7 +95,9 @@ class Tester:
             processing_time = end_time - start_time
             print(f"Processing time for {model_name}: {processing_time:.2f} seconds")
 
-            transcript = transcript["text"] if "text" in transcript else transcript["segments"][0]["text"] if "segments" in transcript and len(transcript["segments"]) > 0 else ""
+            transcript = transcript["text"] if "text" in transcript \
+                else " ".join(segment["text"] for segment in transcript["segments"]) if "segments" in transcript and len(transcript["segments"]) > 0 \
+                    else ""
 
             self.results[model_name] = {
                 "transcript": transcript,
@@ -118,3 +124,8 @@ if __name__ == "__main__":
         save_output=True
     )
     tester.run_tests()
+    notification.notify(
+        title="Transcription Model Tester",
+        message="All transcription model tests have completed.",
+        timeout=10
+    )

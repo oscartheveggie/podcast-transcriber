@@ -13,6 +13,7 @@ import whisper
 from funasr import AutoModel
 from funasr.utils.postprocess_utils import rich_transcription_postprocess
 from qwen_asr import Qwen3ASRModel
+from opencc import OpenCC
 
 
 dotenv.load_dotenv()
@@ -41,7 +42,9 @@ class Transcriber:
                  compute_type: str = "int8",
                  batch_size: int = 16,
                  diarize: bool = False,
-                 align: bool = False):
+                 align: bool = False,
+                 chi_sim: bool = False,         # True for simplified Chinese, False for traditional Chinese.
+                 ):
         
         self.model_name: str = model_name
         if self.model_name not in AVAILABLE_MODELS:
@@ -53,6 +56,9 @@ class Transcriber:
         self.batch_size: int = batch_size
         self.diarize: bool = diarize
         self.align: bool = align
+
+        self.chi_sim: bool = chi_sim
+        self.cc = OpenCC('t2s') if chi_sim else OpenCC('s2t') # converter for Chinese text
 
         self.transcript: dict | None = None
         self.model = None
@@ -94,6 +100,14 @@ class Transcriber:
             print("\n" + "="*50 + "\nSegments with speaker IDs:")
             print(result["segments"]) # segments are now assigned speaker IDs
 
+        # 4. Convert traditional/simplified Chinese if needed
+        for segment in result["segments"]:
+            segment["text"] = segment["text"].strip()
+            if self.chi_sim:
+                segment["text"] = self.cc.convert(segment["text"])
+            else:
+                segment["text"] = self.cc.convert(segment["text"])
+
         self.transcript = result
 
         return self.transcript
@@ -117,6 +131,14 @@ class Transcriber:
                               for segment in result["segments"] if segment["text"].strip() != ""] # remove empty segments and keep only text, start and end
             result = whisperx.align(cleaned_result, model_a, metadata, audio, self.device, return_char_alignments=False)
             print(result["segments"]) # after alignment
+
+        # 4. Convert traditional/simplified Chinese if needed
+        for segment in result["segments"]:
+            segment["text"] = segment["text"].strip()
+            if self.chi_sim:
+                segment["text"] = self.cc.convert(segment["text"])
+            else:
+                segment["text"] = self.cc.convert(segment["text"])
 
         self.transcript = result
 
@@ -148,6 +170,11 @@ class Transcriber:
         # post-process the raw transcription results
         self.transcript = {"text": rich_transcription_postprocess(res[0]["text"])}
     
+        if self.chi_sim:
+            self.transcript["text"] = self.cc.convert(self.transcript["text"])
+        else:
+            self.transcript["text"] = self.cc.convert(self.transcript["text"])
+
         print(self.transcript)
         return self.transcript
 
@@ -248,12 +275,12 @@ if __name__ == "__main__":
     #                     "sensevoice_large",
     #                     "qwen3_asr",]
 
-    model_name = "qwen3_asr"
-    align = True
+    model_name = "sensevoice_small"
+    align = False
     
     transcriber = Transcriber(model_name=model_name, model_dir=SCRIPT_DIR/"../../model", align=align)
-    transcriber.transcribe(audio_path=SCRIPT_DIR / "../../input/debug.mp3")
+    transcriber.transcribe(audio_path=SCRIPT_DIR / "../../input/debug_canto.mp3")
     sample_transcript = "This is a sample transcript for debugging."
-    output_file = SCRIPT_DIR / "../../output/debug_transcript.txt"
+    output_file = SCRIPT_DIR / "../../output/debug_canto.txt"
     saved_path = transcriber.export_to_txt(output_file)
     

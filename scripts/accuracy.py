@@ -1,4 +1,3 @@
-# @TODO: Standardize inputs to use traditional chinese
 import os
 import re
 from jiwer import wer
@@ -66,10 +65,14 @@ def calculate_accuracy(hypothesis_path, reference_path):
 
 
 if __name__ == "__main__":
-    reference_path = os.path.join(PROJ_DIR, "input", "debug.txt")
+
+    reference_file = "cantonese"
+    hypothesis_file = "test_results_2026-06-22_14-43-25"
+
+    reference_path = os.path.join(PROJ_DIR, "input", f"{reference_file}.txt")
     hypothesis_path = os.path.join(
         PROJ_DIR,
         "output",
-        "test_results_2026-06-18_15-30-02.txt",
+        f"{hypothesis_file}.txt",
     )
     calculate_accuracy(hypothesis_path, reference_path)

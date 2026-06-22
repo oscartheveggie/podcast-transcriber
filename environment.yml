@@ -13,6 +13,7 @@ dependencies:
   - pyaudio
   - torchaudio
   - tqdm
+  - plyer
   - python-dotenv
   - pip
   - pip:
@@ -20,4 +21,5 @@ dependencies:
       # Keep pip packages isolated here so conda can solve the binary stack first.
       - whisperx
       - funasr>=1.1.3
+      - opencc-python-reimplemented
       - qwen-asr
