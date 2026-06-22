@@ -116,8 +116,11 @@ class Tester:
 
 
 if __name__ == "__main__":
+
+    audio_file = input("Enter audio file name (without .mp3): ")
+
     tester = Tester(
-        audio_path="input/cantonese.mp3",
+        audio_path=f"input/{audio_file}.mp3",
         models=["whisperx_small", "whisper_small", "sensevoice_small"],
         model_dir=transcript.SCRIPT_DIR / "../../model",
         output_dir=transcript.SCRIPT_DIR / "../../output",
