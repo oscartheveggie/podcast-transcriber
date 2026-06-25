@@ -103,10 +103,7 @@ class Transcriber:
         # 4. Convert traditional/simplified Chinese if needed
         for segment in result["segments"]:
             segment["text"] = segment["text"].strip()
-            if self.chi_sim:
-                segment["text"] = self.cc.convert(segment["text"])
-            else:
-                segment["text"] = self.cc.convert(segment["text"])
+            segment["text"] = self.cc.convert(segment["text"])
 
         self.transcript = result
 
@@ -133,12 +130,7 @@ class Transcriber:
             print(result["segments"]) # after alignment
 
         # 4. Convert traditional/simplified Chinese if needed
-        for segment in result["segments"]:
-            segment["text"] = segment["text"].strip()
-            if self.chi_sim:
-                segment["text"] = self.cc.convert(segment["text"])
-            else:
-                segment["text"] = self.cc.convert(segment["text"])
+        result["text"] = self.cc.convert(result["text"])
 
         self.transcript = result
 
@@ -170,10 +162,8 @@ class Transcriber:
         # post-process the raw transcription results
         self.transcript = {"text": rich_transcription_postprocess(res[0]["text"])}
     
-        if self.chi_sim:
-            self.transcript["text"] = self.cc.convert(self.transcript["text"])
-        else:
-            self.transcript["text"] = self.cc.convert(self.transcript["text"])
+        # Convert traditional/simplified Chinese if needed
+        self.transcript["text"] = self.cc.convert(self.transcript["text"])
 
         print(self.transcript)
         return self.transcript

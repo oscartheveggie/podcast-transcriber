@@ -1,6 +1,8 @@
 import os
 import re
-from jiwer import Compose, ReduceToListOfListOfWords, Strip, ToLowerCase, wer
+import unicodedata
+from jiwer import Compose, Strip, ToLowerCase
+from opencc import OpenCC
 
 PROJ_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 
@@ -31,6 +33,26 @@ EMOJI_RE = re.compile(
     "\U0000FE0F"
     "]+"
 )
+CJK_CHAR_RE = re.compile(
+    "["
+    "\U00003400-\U00004DBF"
+    "\U00004E00-\U00009FFF"
+    "\U0000F900-\U0000FAFF"
+    "\U00020000-\U0002A6DF"
+    "\U0002A700-\U0002B73F"
+    "\U0002B740-\U0002B81F"
+    "\U0002B820-\U0002CEAF"
+    "\U0002CEB0-\U0002EBEF"
+    "\U00030000-\U0003134F"
+    "]"
+)
+MIXED_TOKEN_RE = re.compile(
+    CJK_CHAR_RE.pattern
+    + r"|[a-z0-9]+(?:'[a-z0-9]+)?"
+    + r"|[^\s]",
+    re.IGNORECASE,
+)
+SIMPLIFIED_TO_TRADITIONAL = OpenCC("s2t")
 
 
 class RemoveEmojis:
@@ -39,6 +61,25 @@ class RemoveEmojis:
             return [self(sentence) for sentence in text]
 
         return EMOJI_RE.sub("", text)
+
+
+class ConvertSimplifiedToTraditional:
+    def __call__(self, text):
+        if isinstance(text, list):
+            return [self(sentence) for sentence in text]
+
+        return SIMPLIFIED_TO_TRADITIONAL.convert(text)
+
+
+class ReplacePunctuationWithSpace:
+    def __call__(self, text):
+        if isinstance(text, list):
+            return [self(sentence) for sentence in text]
+
+        return "".join(
+            " " if unicodedata.category(character).startswith("P") else character
+            for character in text
+        )
 
 
 class NormalizeWhitespace:
@@ -79,18 +120,54 @@ PREPROCESS_TRANSFORM = Compose(
     [
         RemoveEmojis(),
         ToLowerCase(),
+        ConvertSimplifiedToTraditional(),
+        ReplacePunctuationWithSpace(),
         NormalizeWhitespace(),
         Strip(),
         CombineSeparatedCharacters(),
         NormalizeWhitespace(),
         Strip(),
-        ReduceToListOfListOfWords(),
     ]
 )
 
 
 def preprocess_text(text):
     return PREPROCESS_TRANSFORM(text)
+
+
+def tokenize_mixed_text(text):
+    return MIXED_TOKEN_RE.findall(preprocess_text(text))
+
+
+def edit_distance(reference_tokens, hypothesis_tokens):
+    previous_row = list(range(len(hypothesis_tokens) + 1))
+
+    for reference_index, reference_token in enumerate(reference_tokens, start=1):
+        current_row = [reference_index]
+
+        for hypothesis_index, hypothesis_token in enumerate(hypothesis_tokens, start=1):
+            substitution_cost = int(reference_token != hypothesis_token)
+            current_row.append(
+                min(
+                    previous_row[hypothesis_index] + 1,
+                    current_row[hypothesis_index - 1] + 1,
+                    previous_row[hypothesis_index - 1] + substitution_cost,
+                )
+            )
+
+        previous_row = current_row
+
+    return previous_row[-1]
+
+
+def mixed_error_rate(reference, hypothesis):
+    reference_tokens = tokenize_mixed_text(reference)
+    hypothesis_tokens = tokenize_mixed_text(hypothesis)
+
+    if not reference_tokens:
+        return 0.0 if not hypothesis_tokens else 1.0
+
+    return edit_distance(reference_tokens, hypothesis_tokens) / len(reference_tokens)
 
 
 def parse_model_transcripts(hypothesis_text):
@@ -121,16 +198,7 @@ def calculate_accuracy(hypothesis_path, reference_path):
 
     model_transcripts = parse_model_transcripts(hypothesis_text)
     accuracies = {
-        model: (
-            1
-            - wer(
-                reference,
-                transcript,
-                reference_transform=PREPROCESS_TRANSFORM,
-                hypothesis_transform=PREPROCESS_TRANSFORM,
-            )
-        )
-        * 100
+        model: (1 - mixed_error_rate(reference, transcript)) * 100
         for model, transcript in model_transcripts.items()
     }
 
@@ -159,8 +227,8 @@ def calculate_accuracy(hypothesis_path, reference_path):
 
 if __name__ == "__main__":
 
-    reference_file = input("Enter reference file name (*without .txt): ")
-    hypothesis_file = input("Enter hypothesis file name (without .txt): ")
+    reference_file = input("Enter reference file name\n(without .txt, e.g., debug):\t\t\t")
+    hypothesis_file = input("Enter hypothesis file name\n(without .txt, e.g., test_results_2026...):\t")
 
     reference_path = os.path.join(PROJ_DIR, "input", f"{reference_file}.txt")
     hypothesis_path = os.path.join(
